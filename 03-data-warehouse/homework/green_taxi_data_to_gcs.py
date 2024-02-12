@@ -12,9 +12,9 @@ Pre-reqs:
 """
 
 # services = ['fhv','green','yellow']
-init_url = 'https://github.com/DataTalksClub/nyc-tlc-data/releases/download/'
+init_url = 'https://d37ci6vzurychx.cloudfront.net/trip-data/'
 # switch out the bucketname
-BUCKET = 'dtc-de-course-412710-yellow-taxi-data'
+BUCKET = 'dtc-de-course-412710-green-taxi-data'
 
 
 def upload_to_gcs(bucket, object_name, local_file):
@@ -36,20 +36,18 @@ def upload_to_gcs(bucket, object_name, local_file):
 
 def web_to_gcs(year, service):
     for i in range(12):
-        # https: // github.com / DataTalksClub / nyc - tlc - data / releases / download / yellow / yellow_tripdata_2021 - 01.
-        # csv.gz
         # sets the month part of the file_name string
         month = '0' + str(i + 1)
         month = month[-2:]
 
-        # csv file_name
-        file_name = f"{service}_tripdata_{year}-{month}.csv.gz"
+        # file_name
+        file_name = f"{service}_tripdata_{year}-{month}.parquet"
 
         # download it using requests via a pandas df
-        request_url = f"{init_url}{service}/{file_name}"
+        request_url = f"{init_url}{file_name}"
+        # request_url = 'https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2022-01.parquet'
         r = requests.get(request_url)
         open(file_name, 'wb').write(r.content)
-        print(f"Local: {file_name}")
         taxi_dtypes = {
             'VendorID': pd.Int64Dtype(),
             'passenger_count': pd.Int64Dtype(),
@@ -67,16 +65,14 @@ def web_to_gcs(year, service):
             'improvement_surcharge': float,
             'total_amount': float,
             'congestion_surcharge': float,
-            'airport_fee': pd.Int64Dtype()
-            # 'ehail_fee': pd.Int64Dtype()
+            'ehail_fee': pd.Int64Dtype()
         }
-        parse_dates = ['tpep_pickup_datetime', 'tpep_dropoff_datetime']
 
         # read it back into a parquet file
-        df = pd.read_csv(file_name, compression='gzip', dtype=taxi_dtypes, parse_dates=parse_dates)
-        # df['tpep_pickup_datetime'] = pd.to_datetime(df['tpep_pickup_datetime'])
-        print(df.head())
-        file_name = file_name.replace('.csv.gz', '.parquet')
+        df = pd.read_parquet(file_name)
+        df = df.astype(taxi_dtypes)
+        df['lpep_pickup_datetime'] = pd.to_datetime(df['lpep_pickup_datetime'])
+        df['lpep_dropoff_datetime'] = pd.to_datetime(df['lpep_dropoff_datetime'])
         df.to_parquet(file_name, engine='pyarrow', coerce_timestamps="us")
         print(f"Parquet: {file_name}")
 
@@ -85,9 +81,7 @@ def web_to_gcs(year, service):
         print(f"GCS: {service}/{file_name}")
 
 
-# web_to_gcs('2019', 'green')
-# web_to_gcs('2020', 'green')
 if __name__ == '__main__':
-    web_to_gcs('2019', 'yellow')
-    web_to_gcs('2020', 'yellow')
+    web_to_gcs('2022', 'green')
+    # web_to_gcs('2020', 'yellow')
 
