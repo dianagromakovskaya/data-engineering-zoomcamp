@@ -24,7 +24,7 @@ renamed as (
 select * from renamed
 where  {{ dbt.date_trunc("year", "pickup_datetime") }} = '2019-01-01'
 
-{% if var('is_test_run', default=false) %}
+{% if var('is_test_run', default=true) %}
 
   limit 100
 
